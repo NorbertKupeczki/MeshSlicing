@@ -1,0 +1,46 @@
+{
+    "name": "Inputs",
+    "maps": [
+        {
+            "name": "Base",
+            "id": "392dded9-aaa6-418d-8e4e-86d9fed5c223",
+            "actions": [
+                {
+                    "name": "Slice",
+                    "type": "Button",
+                    "id": "5741a8c9-e871-4b04-8570-66d67a1f9133",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "837d4ee8-7e93-4760-aa2d-a796f9d9bf4a",
+                    "path": "<Keyboard>/space",
+                    "interactions": "Press(pressPoint=0.5)",
+                    "processors": "",
+                    "groups": "Keyboard",
+                    "action": "Slice",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": [
+        {
+            "name": "Keyboard",
+            "bindingGroup": "Keyboard",
+            "devices": [
+                {
+                    "devicePath": "<Keyboard>",
+                    "isOptional": false,
+                    "isOR": false
+                }
+            ]
+        }
+    ]
+}
