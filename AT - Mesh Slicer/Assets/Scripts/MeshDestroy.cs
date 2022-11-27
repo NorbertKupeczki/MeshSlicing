@@ -2,6 +2,7 @@
 //using System.Collections;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -22,6 +23,9 @@ public class MeshDestroy : MonoBehaviour
     [SerializeField] List<GameObject> cuttingObjects = new List<GameObject>();
     [SerializeField] List<Plane> cuttingPlanes = new List<Plane> { };
     [SerializeField] Vector3 fixedCuttingOffset = new Vector3(0.0f, 0.0f, 0.0f);
+    [Header("Extras")]
+    [SerializeField] public bool addParticles = false;
+    [SerializeField] public ParticleSystem smokeParticles;
     private void Awake()
     {
         ObjectVolume = CalculateVolumeOfMesh(gameObject.GetComponent<MeshFilter>().mesh);
@@ -50,6 +54,11 @@ public class MeshDestroy : MonoBehaviour
     void Update()
     {
 
+    }
+
+    public bool IsAddingParticles()
+    {
+        return addParticles;
     }
 
     private IEnumerator ExplodeCoroutine()
@@ -112,7 +121,7 @@ public class MeshDestroy : MonoBehaviour
         foreach (var part in parts)
         {
             ApplyExplosionOnPart(part);
-            MeshDestroy md = part.GameObject.GetComponent<MeshDestroy>();
+            MeshDestroy md = part._GameObject.GetComponent<MeshDestroy>();
             if (md.GetVolumeProportion() > explosionData.volumeProportion)
             {
                 md.CascadingDestruction();
@@ -268,7 +277,7 @@ public class MeshDestroy : MonoBehaviour
         public Vector3[] Normals;
         public int[][] Triangles;
         public Vector2[] UV;
-        public GameObject GameObject;
+        public GameObject _GameObject;
         public Bounds Bounds = new Bounds();
 
         public PartMesh()
@@ -314,10 +323,10 @@ public class MeshDestroy : MonoBehaviour
 
         public void MakeGameobject(MeshDestroy original)
         {
-            GameObject = new GameObject(original.name);
-            GameObject.transform.position = original.transform.position;
-            GameObject.transform.rotation = original.transform.rotation;
-            GameObject.transform.localScale = original.transform.localScale;
+            _GameObject = new GameObject(original.name);
+            _GameObject.transform.position = original.transform.position;
+            _GameObject.transform.rotation = original.transform.rotation;
+            _GameObject.transform.localScale = original.transform.localScale;
 
             var mesh = new Mesh();
             mesh.name = original.GetComponent<MeshFilter>().mesh.name;
@@ -329,27 +338,37 @@ public class MeshDestroy : MonoBehaviour
                 mesh.SetTriangles(Triangles[i], i, true);
             Bounds = mesh.bounds;
 
-            var renderer = GameObject.AddComponent<MeshRenderer>();
+            var renderer = _GameObject.AddComponent<MeshRenderer>();
             renderer.materials = original.GetComponent<MeshRenderer>().materials;
 
-            var filter = GameObject.AddComponent<MeshFilter>();
+            var filter = _GameObject.AddComponent<MeshFilter>();
             filter.mesh = mesh;
 
-            var collider = GameObject.AddComponent<MeshCollider>();
+            var collider = _GameObject.AddComponent<MeshCollider>();
             collider.convex = true;
             collider.material = original.GetComponent<Collider>().material;
                         
-            var meshDestroy = GameObject.AddComponent<MeshDestroy>();
+            var meshDestroy = _GameObject.AddComponent<MeshDestroy>();
             meshDestroy.ObjectVolume = CalculateVolumeOfMesh(mesh);
             meshDestroy.OriginalVolume = original.OriginalVolume;
             meshDestroy.numberOfCuts = original.numberOfCuts;
             meshDestroy.centreOfExplosion = original.centreOfExplosion;
+            meshDestroy.addParticles = original.addParticles;
+            meshDestroy.smokeParticles = original.smokeParticles;
 
-            var rigidbody = GameObject.AddComponent<Rigidbody>();
+            var rigidbody = _GameObject.AddComponent<Rigidbody>();
             rigidbody.mass = CalculateProportionalMass(original, meshDestroy.ObjectVolume);
             rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
             rigidbody.drag = original.gameObject.GetComponent<Rigidbody>().drag;
             rigidbody.angularDrag = original.gameObject.GetComponent<Rigidbody>().angularDrag;
+
+            if (original.IsAddingParticles())
+            {
+                Debug.Log("Adding particle system");
+                ParticleSystem particleSystem = _GameObject.AddComponent<ParticleSystem>();
+                ComponentUtility.CopyComponent(original.smokeParticles);
+                ComponentUtility.PasteComponentValues(particleSystem);
+            }
 
         }
         public float CalculateProportionalMass(MeshDestroy originalObject, float newVolume)
@@ -442,7 +461,7 @@ public class MeshDestroy : MonoBehaviour
     private void ApplyExplosionOnPart(PartMesh _parts)
     {
         _parts.MakeGameobject(this);
-        _parts.GameObject.GetComponent<Rigidbody>().AddExplosionForce(explosionData.explosionForce, centreOfExplosion.position, explosionData.explosionDistance);
+        _parts._GameObject.GetComponent<Rigidbody>().AddExplosionForce(explosionData.explosionForce, centreOfExplosion.position, explosionData.explosionDistance);
      
     }
 

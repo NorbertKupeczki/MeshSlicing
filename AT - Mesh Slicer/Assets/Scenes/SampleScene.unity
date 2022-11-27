@@ -509,8 +509,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f571e549fb7837945be1022a31c3753e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  explosionForce: 250
+  explosionForce: 200
   explosionDistance: 20
+  volumeProportion: 0.05
 --- !u!1 &938037497
 GameObject:
   m_ObjectHideFlags: 0
@@ -602,7 +603,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 938037497}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -5.568853, y: 0.5790539, z: 0.7792365}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -824,11 +825,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3fadd0ccdf1ed84d94d2f3e09f802e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfCuts: 10
+  numberOfCuts: 1
   centreOfExplosion: {fileID: 717080904}
-  randomizeCuts: 0
+  randomizeCuts: 1
   cuttingObjects: []
   fixedCuttingOffset: {x: 0, y: 0, z: 0}
+  addParticles: 1
+  smokeParticles: {fileID: 1796083770126331350, guid: 7fc19ce4be5590549bc17b0f75916e38, type: 3}
 --- !u!54 &1154218184
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -956,11 +959,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3fadd0ccdf1ed84d94d2f3e09f802e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfCuts: 10
+  numberOfCuts: 1
   centreOfExplosion: {fileID: 717080904}
-  randomizeCuts: 0
+  randomizeCuts: 1
   cuttingObjects: []
   fixedCuttingOffset: {x: 0, y: 0, z: 0}
+  addParticles: 1
+  smokeParticles: {fileID: 1796083770126331350, guid: 7fc19ce4be5590549bc17b0f75916e38, type: 3}
 --- !u!54 &1233833680
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1186,11 +1191,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3fadd0ccdf1ed84d94d2f3e09f802e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfCuts: 10
+  numberOfCuts: 1
   centreOfExplosion: {fileID: 717080904}
-  randomizeCuts: 0
+  randomizeCuts: 1
   cuttingObjects: []
   fixedCuttingOffset: {x: 0, y: 0, z: 0}
+  addParticles: 1
+  smokeParticles: {fileID: 1796083770126331350, guid: 7fc19ce4be5590549bc17b0f75916e38, type: 3}
 --- !u!54 &1927664928
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1383,11 +1390,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3fadd0ccdf1ed84d94d2f3e09f802e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfCuts: 10
+  numberOfCuts: 2
   centreOfExplosion: {fileID: 717080904}
-  randomizeCuts: 1
+  randomizeCuts: 0
   cuttingObjects: []
   fixedCuttingOffset: {x: 0, y: 0, z: 2.65}
+  addParticles: 0
+  smokeParticles: {fileID: 1796083770126331350, guid: 7fc19ce4be5590549bc17b0f75916e38, type: 3}
 --- !u!64 &2971129281417581436
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -1540,7 +1549,7 @@ MeshCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6231364706909207644}
-  m_Material: {fileID: 13400000, guid: 6becf4693f823a145b69b2c979985c8b, type: 2}
+  m_Material: {fileID: 0}
   m_IsTrigger: 0
   m_Enabled: 1
   serializedVersion: 4
