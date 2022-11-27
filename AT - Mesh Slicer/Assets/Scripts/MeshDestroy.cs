@@ -1,7 +1,7 @@
 //using System;
 //using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -12,7 +12,8 @@ public class MeshDestroy : MonoBehaviour
     private Vector2 edgeUV = Vector2.zero;
     private Plane edgePlane = new Plane();
     private ExplosionPoint explosionData;
-    private float ObjectVolume { get; set; } // Volume based on the bounding box 
+    private float ObjectVolume { get; set; } // Mesh volume
+    private float OriginalVolume { get; set; } = 0.0f; // Original volume of the mesh
     
     [SerializeField] int numberOfCuts  = 1;
     [SerializeField] Transform centreOfExplosion;
@@ -23,18 +24,26 @@ public class MeshDestroy : MonoBehaviour
     [SerializeField] Vector3 fixedCuttingOffset = new Vector3(0.0f, 0.0f, 0.0f);
     private void Awake()
     {
-        
+        ObjectVolume = CalculateVolumeOfMesh(gameObject.GetComponent<MeshFilter>().mesh);
     }
 
     void Start()
     {
-        ObjectVolume = CalculateVolumeOfMesh(gameObject.GetComponent<MeshFilter>().mesh);
         explosionData = centreOfExplosion.gameObject.GetComponent<ExplosionPoint>();
+        if (OriginalVolume == 0.0f)
+        {
+            OriginalVolume = ObjectVolume;
+        }
     }
 
     public void StartDestruction()
     {
-            ExplodeMesh();
+        ExplodeMesh(randomizeCuts);
+    }
+
+    public void CascadingDestruction()
+    {
+        StartCoroutine(ExplodeCoroutine());
     }
 
     // Update is called once per frame
@@ -43,7 +52,13 @@ public class MeshDestroy : MonoBehaviour
 
     }
 
-    private void ExplodeMesh()
+    private IEnumerator ExplodeCoroutine()
+    {
+        yield return null;
+        ExplodeMesh(true);
+    }
+
+    private void ExplodeMesh(bool _randomCuts)
     {
         var originalMesh = GetComponent<MeshFilter>().mesh;
         originalMesh.RecalculateBounds();
@@ -63,7 +78,7 @@ public class MeshDestroy : MonoBehaviour
 
         parts.Add(mainPart);
 
-        if (randomizeCuts)
+        if (_randomCuts)
         {
             for (var c = 0; c < numberOfCuts; c++)
             {
@@ -72,12 +87,8 @@ public class MeshDestroy : MonoBehaviour
                     Bounds bounds = parts[i].Bounds;
                     bounds.Expand(0.25f);
 
-                    Plane plane = new Plane(Random.onUnitSphere * 0.5f, new Vector3(Random.Range(bounds.min.x, bounds.max.x),
-                                                                                    Random.Range(bounds.min.y, bounds.max.y),
-                                                                                    Random.Range(bounds.min.z, bounds.max.z)));
-
-                    subParts.Add(GenerateMesh(parts[i], plane, true));
-                    subParts.Add(GenerateMesh(parts[i], plane, false));
+                    Plane plane = GetRandomPlane(bounds);
+                    subParts.AddRange(SeparateMeshToSubParts(parts[i], plane));
                 }
                 parts = new List<PartMesh>(subParts);
                 subParts.Clear();
@@ -85,35 +96,30 @@ public class MeshDestroy : MonoBehaviour
         }
         else
         {
-            //foreach (GameObject plane in cuttingObjects)
-            //{
-            //    cuttingPlanes.Add(CreateCuttingPlane(plane));
-            //}
-
             cuttingPlanes.AddRange(CreateFixedCuttingPlanes(transform.position + fixedCuttingOffset, originalMesh.bounds));
 
             for (var c = 0; c < cuttingPlanes.Count; c++)
             {
                 for (var i = 0; i < parts.Count; i++)
-                {
-                    Bounds bounds = parts[i].Bounds;
-                    bounds.Expand(0.25f);
-                    
-                    subParts.Add(GenerateMesh(parts[i], cuttingPlanes[c], true));
-                    subParts.Add(GenerateMesh(parts[i], cuttingPlanes[c], false));
+                {   
+                    subParts.AddRange(SeparateMeshToSubParts(parts[i], cuttingPlanes[c]));
                 }
                 parts = new List<PartMesh>(subParts);
                 subParts.Clear();
             }
         }
         
-
-        for (var i = 0; i < parts.Count; i++)
+        foreach (var part in parts)
         {
-            parts[i].MakeGameobject(this);
-            parts[i].GameObject.GetComponent<Rigidbody>().AddExplosionForce(explosionData.explosionForce, centreOfExplosion.position, explosionData.explosionDistance);
+            ApplyExplosionOnPart(part);
+            MeshDestroy md = part.GameObject.GetComponent<MeshDestroy>();
+            if (md.GetVolumeProportion() > explosionData.volumeProportion)
+            {
+                md.CascadingDestruction();
+            }
         }
-
+        
+        
         Destroy(gameObject);
     }
 
@@ -335,12 +341,15 @@ public class MeshDestroy : MonoBehaviour
                         
             var meshDestroy = GameObject.AddComponent<MeshDestroy>();
             meshDestroy.ObjectVolume = CalculateVolumeOfMesh(mesh);
+            meshDestroy.OriginalVolume = original.OriginalVolume;
             meshDestroy.numberOfCuts = original.numberOfCuts;
             meshDestroy.centreOfExplosion = original.centreOfExplosion;
 
             var rigidbody = GameObject.AddComponent<Rigidbody>();
             rigidbody.mass = CalculateProportionalMass(original, meshDestroy.ObjectVolume);
             rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            rigidbody.drag = original.gameObject.GetComponent<Rigidbody>().drag;
+            rigidbody.angularDrag = original.gameObject.GetComponent<Rigidbody>().angularDrag;
 
         }
         public float CalculateProportionalMass(MeshDestroy originalObject, float newVolume)
@@ -412,5 +421,33 @@ public class MeshDestroy : MonoBehaviour
         planeList.Add(new Plane(new Vector3(0.0f,0.0f,1.0f), 0.0f));
 
         return planeList;
+    }
+
+    private Plane GetRandomPlane(Bounds _bounds)
+    {
+        return new Plane(Random.onUnitSphere * 0.5f, new Vector3(Random.Range(_bounds.min.x, _bounds.max.x),
+                                                                 Random.Range(_bounds.min.y, _bounds.max.y),
+                                                                 Random.Range(_bounds.min.z, _bounds.max.z)));
+    }
+
+    private List<PartMesh> SeparateMeshToSubParts(PartMesh _meshToSeparate, Plane _plane)
+    {
+        List<PartMesh> result = new List<PartMesh>();
+        result.Add(GenerateMesh(_meshToSeparate, _plane, true));
+        result.Add(GenerateMesh(_meshToSeparate, _plane, false));
+
+        return result;
+    }
+
+    private void ApplyExplosionOnPart(PartMesh _parts)
+    {
+        _parts.MakeGameobject(this);
+        _parts.GameObject.GetComponent<Rigidbody>().AddExplosionForce(explosionData.explosionForce, centreOfExplosion.position, explosionData.explosionDistance);
+     
+    }
+
+    public float GetVolumeProportion()
+    {
+        return ObjectVolume / OriginalVolume;
     }
 }
