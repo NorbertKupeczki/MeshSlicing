@@ -1,10 +1,6 @@
-//using System;
-//using System.Collections;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEditorInternal;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class MeshDestroy : MonoBehaviour
 {
@@ -13,19 +9,23 @@ public class MeshDestroy : MonoBehaviour
     private Vector2 edgeUV = Vector2.zero;
     private Plane edgePlane = new Plane();
     private ExplosionPoint explosionData;
-    private float ObjectVolume { get; set; } // Mesh volume
-    private float OriginalVolume { get; set; } = 0.0f; // Original volume of the mesh
-    
+    private float ObjectVolume; // Mesh volume
+    private float OriginalVolume = 0.0f; // Original volume of the mesh
+
+    [Header ("Base settings")]
     [SerializeField] int numberOfCuts  = 1;
     [SerializeField] Transform centreOfExplosion;
+
     [Header("Cutting properties")]
     [SerializeField] bool randomizeCuts = true;
     [SerializeField] List<GameObject> cuttingObjects = new List<GameObject>();
     [SerializeField] List<Plane> cuttingPlanes = new List<Plane> { };
     [SerializeField] Vector3 fixedCuttingOffset = new Vector3(0.0f, 0.0f, 0.0f);
+    
     [Header("Extras")]
     [SerializeField] public bool addParticles = false;
     [SerializeField] public ParticleSystem smokeParticles;
+    
     private void Awake()
     {
         ObjectVolume = CalculateVolumeOfMesh(gameObject.GetComponent<MeshFilter>().mesh);
@@ -40,6 +40,46 @@ public class MeshDestroy : MonoBehaviour
         }
     }
 
+    #region "Getters and Setters"
+    
+    public float GetObjectVolume()
+    {
+        return ObjectVolume;
+    }
+    public void SetObjectVolume(float value)
+    {
+        ObjectVolume = value;
+    }
+
+    public float GetOriginalVolume()
+    {
+        return OriginalVolume;
+    }
+    public void SetOriginalVolume(float value)
+    {
+        OriginalVolume = value;
+    }
+    
+    public int GetNumberOfCuts()
+    {
+        return numberOfCuts;
+    }
+    public void SetNumberOfCuts(int value)
+    {
+        numberOfCuts = value;
+    }
+
+    public Transform GetCentreOfExplosion()
+    {
+        return centreOfExplosion;
+    }
+    public void SetCentreOfExplosion(Transform value)
+    {
+        centreOfExplosion = value;
+    }
+
+    #endregion
+
     public void StartDestruction()
     {
         ExplodeMesh(randomizeCuts);
@@ -48,12 +88,6 @@ public class MeshDestroy : MonoBehaviour
     public void CascadingDestruction()
     {
         StartCoroutine(ExplodeCoroutine());
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
     }
 
     public bool IsAddingParticles()
@@ -71,10 +105,10 @@ public class MeshDestroy : MonoBehaviour
     {
         var originalMesh = GetComponent<MeshFilter>().mesh;
         originalMesh.RecalculateBounds();
-        var parts = new List<PartMesh>();
-        var subParts = new List<PartMesh>();
+        List<MeshClass> meshParts = new List<MeshClass>();
+        List<MeshClass> meshSubParts = new List<MeshClass>();
 
-        var mainPart = new PartMesh()
+        MeshClass mainMesh = new MeshClass()
         {
             UV = originalMesh.uv,
             Vertices = originalMesh.vertices,
@@ -83,24 +117,24 @@ public class MeshDestroy : MonoBehaviour
             Bounds = originalMesh.bounds
         };
         for (int i = 0; i < originalMesh.subMeshCount; i++)
-            mainPart.Triangles[i] = originalMesh.GetTriangles(i);
+            mainMesh.Triangles[i] = originalMesh.GetTriangles(i);
 
-        parts.Add(mainPart);
+        meshParts.Add(mainMesh);
 
         if (_randomCuts)
         {
             for (var c = 0; c < numberOfCuts; c++)
             {
-                for (var i = 0; i < parts.Count; i++)
+                for (var i = 0; i < meshParts.Count; i++)
                 {
-                    Bounds bounds = parts[i].Bounds;
+                    Bounds bounds = meshParts[i].Bounds;
                     bounds.Expand(0.25f);
 
                     Plane plane = GetRandomPlane(bounds);
-                    subParts.AddRange(SeparateMeshToSubParts(parts[i], plane));
+                    meshSubParts.AddRange(SeparateMeshToSubParts(meshParts[i], plane));
                 }
-                parts = new List<PartMesh>(subParts);
-                subParts.Clear();
+                meshParts = new List<MeshClass>(meshSubParts);
+                meshSubParts.Clear();
             }
         }
         else
@@ -109,127 +143,124 @@ public class MeshDestroy : MonoBehaviour
 
             for (var c = 0; c < cuttingPlanes.Count; c++)
             {
-                for (var i = 0; i < parts.Count; i++)
+                for (var i = 0; i < meshParts.Count; i++)
                 {   
-                    subParts.AddRange(SeparateMeshToSubParts(parts[i], cuttingPlanes[c]));
+                    meshSubParts.AddRange(SeparateMeshToSubParts(meshParts[i], cuttingPlanes[c]));
                 }
-                parts = new List<PartMesh>(subParts);
-                subParts.Clear();
+                meshParts = new List<MeshClass>(meshSubParts);
+                meshSubParts.Clear();
             }
         }
         
-        foreach (var part in parts)
+        foreach (MeshClass part in meshParts)
         {
             ApplyExplosionOnPart(part);
-            MeshDestroy md = part._GameObject.GetComponent<MeshDestroy>();
+            MeshDestroy md = part.NewGameObject.GetComponent<MeshDestroy>();
             if (md.GetVolumeProportion() > explosionData.volumeProportion)
             {
                 md.CascadingDestruction();
             }
         }
         
-        
         Destroy(gameObject);
     }
 
-    private PartMesh GenerateMesh(PartMesh original, Plane plane, bool left)
+    private MeshClass GenerateMesh(MeshClass originalMesh, Plane plane, bool left)
     {
-        var partMesh = new PartMesh() { };
-        var ray1 = new Ray();
-        var ray2 = new Ray();
+        MeshClass newMesh = new MeshClass() { };
+        Ray ray1 = new Ray();
+        Ray ray2 = new Ray();
 
-
-        for (var i = 0; i < original.Triangles.Length; i++)
+        for (var i = 0; i < originalMesh.Triangles.Length; ++i)
         {
-            var triangles = original.Triangles[i];
+            int[] triangles = originalMesh.Triangles[i];
             edgeSet = false;
 
-            for (var j = 0; j < triangles.Length; j = j + 3)
+            for (var j = 0; j < triangles.Length; j += 3)
             {
-                var sideA = plane.GetSide(original.Vertices[triangles[j]]) == left;
-                var sideB = plane.GetSide(original.Vertices[triangles[j + 1]]) == left;
-                var sideC = plane.GetSide(original.Vertices[triangles[j + 2]]) == left;
+                bool vertA = plane.GetSide(originalMesh.Vertices[triangles[j]]) == left;
+                bool vertB = plane.GetSide(originalMesh.Vertices[triangles[j + 1]]) == left;
+                bool vertC = plane.GetSide(originalMesh.Vertices[triangles[j + 2]]) == left;
 
-                var sideCount = (sideA ? 1 : 0) +
-                                (sideB ? 1 : 0) +
-                                (sideC ? 1 : 0);
+                int sideCount = (vertA ? 1 : 0) + (vertB ? 1 : 0) + (vertC ? 1 : 0);
+                
                 if (sideCount == 0)
                 {
                     continue;
                 }
                 if (sideCount == 3)
                 {
-                    partMesh.AddTriangle(i,
-                                         original.Vertices[triangles[j]], original.Vertices[triangles[j + 1]], original.Vertices[triangles[j + 2]],
-                                         original.Normals[triangles[j]], original.Normals[triangles[j + 1]], original.Normals[triangles[j + 2]],
-                                         original.UV[triangles[j]], original.UV[triangles[j + 1]], original.UV[triangles[j + 2]]);
+                    newMesh.AddTriangle(i,
+                                         originalMesh.Vertices[triangles[j]], originalMesh.Vertices[triangles[j + 1]], originalMesh.Vertices[triangles[j + 2]],
+                                         originalMesh.Normals[triangles[j]], originalMesh.Normals[triangles[j + 1]], originalMesh.Normals[triangles[j + 2]],
+                                         originalMesh.UV[triangles[j]], originalMesh.UV[triangles[j + 1]], originalMesh.UV[triangles[j + 2]]);
                     continue;
                 }
 
                 //cut points
-                var singleIndex = sideB == sideC ? 0 : sideA == sideC ? 1 : 2;
+                int singleIndex = vertB == vertC ? 0 : vertA == vertC ? 1 : 2;
 
-                ray1.origin = original.Vertices[triangles[j + singleIndex]];
-                var dir1 = original.Vertices[triangles[j + ((singleIndex + 1) % 3)]] - original.Vertices[triangles[j + singleIndex]];
+                ray1.origin = originalMesh.Vertices[triangles[j + singleIndex]];
+                var dir1 = originalMesh.Vertices[triangles[j + ((singleIndex + 1) % 3)]] - originalMesh.Vertices[triangles[j + singleIndex]];
                 ray1.direction = dir1;
                 plane.Raycast(ray1, out var enter1);
                 var lerp1 = enter1 / dir1.magnitude;
 
-                ray2.origin = original.Vertices[triangles[j + singleIndex]];
-                var dir2 = original.Vertices[triangles[j + ((singleIndex + 2) % 3)]] - original.Vertices[triangles[j + singleIndex]];
+                ray2.origin = originalMesh.Vertices[triangles[j + singleIndex]];
+                var dir2 = originalMesh.Vertices[triangles[j + ((singleIndex + 2) % 3)]] - originalMesh.Vertices[triangles[j + singleIndex]];
                 ray2.direction = dir2;
                 plane.Raycast(ray2, out var enter2);
                 var lerp2 = enter2 / dir2.magnitude;
 
                 //first vertex = ancor
                 AddEdge(i,
-                        partMesh,
+                        newMesh,
                         left ? plane.normal * -1f : plane.normal,
                         ray1.origin + ray1.direction.normalized * enter1,
                         ray2.origin + ray2.direction.normalized * enter2,
-                        Vector2.Lerp(original.UV[triangles[j + singleIndex]], original.UV[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
-                        Vector2.Lerp(original.UV[triangles[j + singleIndex]], original.UV[triangles[j + ((singleIndex + 2) % 3)]], lerp2));
+                        Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
+                        Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 2) % 3)]], lerp2));
 
                 if (sideCount == 1)
                 {
-                    partMesh.AddTriangle(i,
-                                        original.Vertices[triangles[j + singleIndex]],
+                    newMesh.AddTriangle(i,
+                                        originalMesh.Vertices[triangles[j + singleIndex]],
                                         //Vector3.Lerp(originalMesh.vertices[triangles[j + singleIndex]], originalMesh.vertices[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
                                         //Vector3.Lerp(originalMesh.vertices[triangles[j + singleIndex]], originalMesh.vertices[triangles[j + ((singleIndex + 2) % 3)]], lerp2),
                                         ray1.origin + ray1.direction.normalized * enter1,
                                         ray2.origin + ray2.direction.normalized * enter2,
-                                        original.Normals[triangles[j + singleIndex]],
-                                        Vector3.Lerp(original.Normals[triangles[j + singleIndex]], original.Normals[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
-                                        Vector3.Lerp(original.Normals[triangles[j + singleIndex]], original.Normals[triangles[j + ((singleIndex + 2) % 3)]], lerp2),
-                                        original.UV[triangles[j + singleIndex]],
-                                        Vector2.Lerp(original.UV[triangles[j + singleIndex]], original.UV[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
-                                        Vector2.Lerp(original.UV[triangles[j + singleIndex]], original.UV[triangles[j + ((singleIndex + 2) % 3)]], lerp2));
+                                        originalMesh.Normals[triangles[j + singleIndex]],
+                                        Vector3.Lerp(originalMesh.Normals[triangles[j + singleIndex]], originalMesh.Normals[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
+                                        Vector3.Lerp(originalMesh.Normals[triangles[j + singleIndex]], originalMesh.Normals[triangles[j + ((singleIndex + 2) % 3)]], lerp2),
+                                        originalMesh.UV[triangles[j + singleIndex]],
+                                        Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
+                                        Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 2) % 3)]], lerp2));
 
                     continue;
                 }
 
                 if (sideCount == 2)
                 {
-                    partMesh.AddTriangle(i,
+                    newMesh.AddTriangle(i,
                                         ray1.origin + ray1.direction.normalized * enter1,
-                                        original.Vertices[triangles[j + ((singleIndex + 1) % 3)]],
-                                        original.Vertices[triangles[j + ((singleIndex + 2) % 3)]],
-                                        Vector3.Lerp(original.Normals[triangles[j + singleIndex]], original.Normals[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
-                                        original.Normals[triangles[j + ((singleIndex + 1) % 3)]],
-                                        original.Normals[triangles[j + ((singleIndex + 2) % 3)]],
-                                        Vector2.Lerp(original.UV[triangles[j + singleIndex]], original.UV[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
-                                        original.UV[triangles[j + ((singleIndex + 1) % 3)]],
-                                        original.UV[triangles[j + ((singleIndex + 2) % 3)]]);
-                    partMesh.AddTriangle(i,
+                                        originalMesh.Vertices[triangles[j + ((singleIndex + 1) % 3)]],
+                                        originalMesh.Vertices[triangles[j + ((singleIndex + 2) % 3)]],
+                                        Vector3.Lerp(originalMesh.Normals[triangles[j + singleIndex]], originalMesh.Normals[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
+                                        originalMesh.Normals[triangles[j + ((singleIndex + 1) % 3)]],
+                                        originalMesh.Normals[triangles[j + ((singleIndex + 2) % 3)]],
+                                        Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
+                                        originalMesh.UV[triangles[j + ((singleIndex + 1) % 3)]],
+                                        originalMesh.UV[triangles[j + ((singleIndex + 2) % 3)]]);
+                    newMesh.AddTriangle(i,
                                         ray1.origin + ray1.direction.normalized * enter1,
-                                        original.Vertices[triangles[j + ((singleIndex + 2) % 3)]],
+                                        originalMesh.Vertices[triangles[j + ((singleIndex + 2) % 3)]],
                                         ray2.origin + ray2.direction.normalized * enter2,
-                                        Vector3.Lerp(original.Normals[triangles[j + singleIndex]], original.Normals[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
-                                        original.Normals[triangles[j + ((singleIndex + 2) % 3)]],
-                                        Vector3.Lerp(original.Normals[triangles[j + singleIndex]], original.Normals[triangles[j + ((singleIndex + 2) % 3)]], lerp2),
-                                        Vector2.Lerp(original.UV[triangles[j + singleIndex]], original.UV[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
-                                        original.UV[triangles[j + ((singleIndex + 2) % 3)]],
-                                        Vector2.Lerp(original.UV[triangles[j + singleIndex]], original.UV[triangles[j + ((singleIndex + 2) % 3)]], lerp2));
+                                        Vector3.Lerp(originalMesh.Normals[triangles[j + singleIndex]], originalMesh.Normals[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
+                                        originalMesh.Normals[triangles[j + ((singleIndex + 2) % 3)]],
+                                        Vector3.Lerp(originalMesh.Normals[triangles[j + singleIndex]], originalMesh.Normals[triangles[j + ((singleIndex + 2) % 3)]], lerp2),
+                                        Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
+                                        originalMesh.UV[triangles[j + ((singleIndex + 2) % 3)]],
+                                        Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 2) % 3)]], lerp2));
                     continue;
                 }
 
@@ -237,12 +268,12 @@ public class MeshDestroy : MonoBehaviour
             }
         }
 
-        partMesh.FillArrays();
+        newMesh.FillArrays();
 
-        return partMesh;
+        return newMesh;
     }
 
-    private void AddEdge(int subMesh, PartMesh partMesh, Vector3 normal, Vector3 vertex1, Vector3 vertex2, Vector2 uv1, Vector2 uv2)
+    private void AddEdge(int subMesh, MeshClass partMesh, Vector3 normal, Vector3 vertex1, Vector3 vertex2, Vector2 uv1, Vector2 uv2)
     {
         if (!edgeSet)
         {
@@ -266,119 +297,7 @@ public class MeshDestroy : MonoBehaviour
                                 uv2);
         }
     }
-
-    public class PartMesh
-    {
-        private List<Vector3> _Verticies = new List<Vector3>();
-        private List<Vector3> _Normals = new List<Vector3>();
-        private List<List<int>> _Triangles = new List<List<int>>();
-        private List<Vector2> _UVs = new List<Vector2>();
-        public Vector3[] Vertices;
-        public Vector3[] Normals;
-        public int[][] Triangles;
-        public Vector2[] UV;
-        public GameObject _GameObject;
-        public Bounds Bounds = new Bounds();
-
-        public PartMesh()
-        {
-
-        }
-
-        public void AddTriangle(int submesh, Vector3 vert1, Vector3 vert2, Vector3 vert3, Vector3 normal1, Vector3 normal2, Vector3 normal3, Vector2 uv1, Vector2 uv2, Vector2 uv3)
-        {
-            if (_Triangles.Count - 1 < submesh)
-                _Triangles.Add(new List<int>());
-
-            _Triangles[submesh].Add(_Verticies.Count);
-            _Verticies.Add(vert1);
-            _Triangles[submesh].Add(_Verticies.Count);
-            _Verticies.Add(vert2);
-            _Triangles[submesh].Add(_Verticies.Count);
-            _Verticies.Add(vert3);
-            _Normals.Add(normal1);
-            _Normals.Add(normal2);
-            _Normals.Add(normal3);
-            _UVs.Add(uv1);
-            _UVs.Add(uv2);
-            _UVs.Add(uv3);
-
-            Bounds.min = Vector3.Min(Bounds.min, vert1);
-            Bounds.min = Vector3.Min(Bounds.min, vert2);
-            Bounds.min = Vector3.Min(Bounds.min, vert3);
-            Bounds.max = Vector3.Min(Bounds.max, vert1);
-            Bounds.max = Vector3.Min(Bounds.max, vert2);
-            Bounds.max = Vector3.Min(Bounds.max, vert3);
-        }
-
-        public void FillArrays()
-        {
-            Vertices = _Verticies.ToArray();
-            Normals = _Normals.ToArray();
-            UV = _UVs.ToArray();
-            Triangles = new int[_Triangles.Count][];
-            for (var i = 0; i < _Triangles.Count; i++)
-                Triangles[i] = _Triangles[i].ToArray();
-        }
-
-        public void MakeGameobject(MeshDestroy original)
-        {
-            _GameObject = new GameObject(original.name);
-            _GameObject.transform.position = original.transform.position;
-            _GameObject.transform.rotation = original.transform.rotation;
-            _GameObject.transform.localScale = original.transform.localScale;
-
-            var mesh = new Mesh();
-            mesh.name = original.GetComponent<MeshFilter>().mesh.name;
-
-            mesh.vertices = Vertices;
-            mesh.normals = Normals;
-            mesh.uv = UV;
-            for (var i = 0; i < Triangles.Length; i++)
-                mesh.SetTriangles(Triangles[i], i, true);
-            Bounds = mesh.bounds;
-
-            var renderer = _GameObject.AddComponent<MeshRenderer>();
-            renderer.materials = original.GetComponent<MeshRenderer>().materials;
-
-            var filter = _GameObject.AddComponent<MeshFilter>();
-            filter.mesh = mesh;
-
-            var collider = _GameObject.AddComponent<MeshCollider>();
-            collider.convex = true;
-            collider.material = original.GetComponent<Collider>().material;
-                        
-            var meshDestroy = _GameObject.AddComponent<MeshDestroy>();
-            meshDestroy.ObjectVolume = CalculateVolumeOfMesh(mesh);
-            meshDestroy.OriginalVolume = original.OriginalVolume;
-            meshDestroy.numberOfCuts = original.numberOfCuts;
-            meshDestroy.centreOfExplosion = original.centreOfExplosion;
-            meshDestroy.addParticles = original.addParticles;
-            meshDestroy.smokeParticles = original.smokeParticles;
-
-            var rigidbody = _GameObject.AddComponent<Rigidbody>();
-            rigidbody.mass = CalculateProportionalMass(original, meshDestroy.ObjectVolume);
-            rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
-            rigidbody.drag = original.gameObject.GetComponent<Rigidbody>().drag;
-            rigidbody.angularDrag = original.gameObject.GetComponent<Rigidbody>().angularDrag;
-
-            if (original.IsAddingParticles())
-            {
-                Debug.Log("Adding particle system");
-                ParticleSystem particleSystem = _GameObject.AddComponent<ParticleSystem>();
-                ComponentUtility.CopyComponent(original.smokeParticles);
-                ComponentUtility.PasteComponentValues(particleSystem);
-            }
-
-        }
-        public float CalculateProportionalMass(MeshDestroy originalObject, float newVolume)
-        {
-            float originalMass = originalObject.gameObject.GetComponent<Rigidbody>().mass;
-            float originalVolume = originalObject.ObjectVolume;
-            return newVolume * originalMass / originalVolume;
-        }
-    }
-
+    
     public static float SignedVolumeOfTriangle(Vector3 p1, Vector3 p2, Vector3 p3)
     {
         float v321 = p3.x * p2.y * p1.z;
@@ -391,7 +310,7 @@ public class MeshDestroy : MonoBehaviour
         return (1.0f / 6.0f) * (-v321 + v231 + v312 - v132 - v213 + v123);
     }
 
-    public static float CalculateVolumeOfMesh(Mesh mesh)
+    public float CalculateVolumeOfMesh(Mesh mesh)
     {
         float volume = 0;
 
@@ -449,19 +368,19 @@ public class MeshDestroy : MonoBehaviour
                                                                  Random.Range(_bounds.min.z, _bounds.max.z)));
     }
 
-    private List<PartMesh> SeparateMeshToSubParts(PartMesh _meshToSeparate, Plane _plane)
+    private List<MeshClass> SeparateMeshToSubParts(MeshClass _meshToSeparate, Plane _plane)
     {
-        List<PartMesh> result = new List<PartMesh>();
+        List<MeshClass> result = new List<MeshClass>();
         result.Add(GenerateMesh(_meshToSeparate, _plane, true));
         result.Add(GenerateMesh(_meshToSeparate, _plane, false));
 
         return result;
     }
 
-    private void ApplyExplosionOnPart(PartMesh _parts)
+    private void ApplyExplosionOnPart(MeshClass _parts)
     {
-        _parts.MakeGameobject(this);
-        _parts._GameObject.GetComponent<Rigidbody>().AddExplosionForce(explosionData.explosionForce, centreOfExplosion.position, explosionData.explosionDistance);
+        _parts.CreateNewGameObject(this);
+        _parts.NewGameObject.GetComponent<Rigidbody>().AddExplosionForce(explosionData.explosionForce, centreOfExplosion.position, explosionData.explosionDistance);
      
     }
 
