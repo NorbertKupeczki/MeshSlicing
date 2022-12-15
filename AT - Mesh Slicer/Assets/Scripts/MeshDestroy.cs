@@ -25,6 +25,7 @@ public class MeshDestroy : MonoBehaviour
     [Header("Extras")]
     [SerializeField] public bool addParticles = false;
     [SerializeField] public ParticleSystem smokeParticles;
+    [SerializeField] public bool christmasSpecial = false;
     
     private void Awake()
     {
@@ -123,9 +124,9 @@ public class MeshDestroy : MonoBehaviour
 
         if (_randomCuts)
         {
-            for (var c = 0; c < numberOfCuts; c++)
+            for (int c = 0; c < numberOfCuts; c++)
             {
-                for (var i = 0; i < meshParts.Count; i++)
+                for (int i = 0; i < meshParts.Count; i++)
                 {
                     Bounds bounds = meshParts[i].Bounds;
                     bounds.Expand(0.25f);
@@ -141,9 +142,9 @@ public class MeshDestroy : MonoBehaviour
         {
             cuttingPlanes.AddRange(CreateFixedCuttingPlanes(transform.position + fixedCuttingOffset, originalMesh.bounds));
 
-            for (var c = 0; c < cuttingPlanes.Count; c++)
+            for (int c = 0; c < cuttingPlanes.Count; c++)
             {
-                for (var i = 0; i < meshParts.Count; i++)
+                for (int i = 0; i < meshParts.Count; i++)
                 {   
                     meshSubParts.AddRange(SeparateMeshToSubParts(meshParts[i], cuttingPlanes[c]));
                 }
@@ -165,22 +166,22 @@ public class MeshDestroy : MonoBehaviour
         Destroy(gameObject);
     }
 
-    private MeshClass GenerateMesh(MeshClass originalMesh, Plane plane, bool left)
+    private MeshClass GenerateMesh(MeshClass originalMesh, Plane plane, bool above)
     {
         MeshClass newMesh = new MeshClass() { };
         Ray ray1 = new Ray();
         Ray ray2 = new Ray();
 
-        for (var i = 0; i < originalMesh.Triangles.Length; ++i)
+        for (int i = 0; i < originalMesh.Triangles.Length; ++i)
         {
             int[] triangles = originalMesh.Triangles[i];
             edgeSet = false;
 
-            for (var j = 0; j < triangles.Length; j += 3)
+            for (int j = 0; j < triangles.Length; j += 3)
             {
-                bool vertA = plane.GetSide(originalMesh.Vertices[triangles[j]]) == left;
-                bool vertB = plane.GetSide(originalMesh.Vertices[triangles[j + 1]]) == left;
-                bool vertC = plane.GetSide(originalMesh.Vertices[triangles[j + 2]]) == left;
+                bool vertA = plane.GetSide(originalMesh.Vertices[triangles[j]])     == above;
+                bool vertB = plane.GetSide(originalMesh.Vertices[triangles[j + 1]]) == above;
+                bool vertC = plane.GetSide(originalMesh.Vertices[triangles[j + 2]]) == above;
 
                 int sideCount = (vertA ? 1 : 0) + (vertB ? 1 : 0) + (vertC ? 1 : 0);
                 
@@ -200,19 +201,13 @@ public class MeshDestroy : MonoBehaviour
                 //cut points
                 int singleIndex = vertB == vertC ? 0 : vertA == vertC ? 1 : 2;
 
-                ray1.origin = originalMesh.Vertices[triangles[j + singleIndex]];
-                var dir1 = originalMesh.Vertices[triangles[j + ((singleIndex + 1) % 3)]] - originalMesh.Vertices[triangles[j + singleIndex]];
-                ray1.direction = dir1;
-                plane.Raycast(ray1, out var enter1);
-                var lerp1 = enter1 / dir1.magnitude;
+                float enter1 = CastRayToPlane(ref ray1, plane, originalMesh.Vertices[triangles[j + singleIndex]], originalMesh.Vertices[triangles[j + ((singleIndex + 1) % 3)]]);
+                float lerp1 = enter1 / ray1.direction.magnitude;
 
-                ray2.origin = originalMesh.Vertices[triangles[j + singleIndex]];
-                var dir2 = originalMesh.Vertices[triangles[j + ((singleIndex + 2) % 3)]] - originalMesh.Vertices[triangles[j + singleIndex]];
-                ray2.direction = dir2;
-                plane.Raycast(ray2, out var enter2);
-                var lerp2 = enter2 / dir2.magnitude;
-
-                //first vertex = ancor
+                float enter2 = CastRayToPlane(ref ray2, plane, originalMesh.Vertices[triangles[j + singleIndex]], originalMesh.Vertices[triangles[j + ((singleIndex + 2) % 3)]]);
+                float lerp2 = enter2 / ray2.direction.magnitude;
+                /*
+                //first vertex = anchor
                 AddEdge(i,
                         newMesh,
                         left ? plane.normal * -1f : plane.normal,
@@ -220,7 +215,7 @@ public class MeshDestroy : MonoBehaviour
                         ray2.origin + ray2.direction.normalized * enter2,
                         Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
                         Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 2) % 3)]], lerp2));
-
+                */
                 if (sideCount == 1)
                 {
                     newMesh.AddTriangle(i,
@@ -263,7 +258,7 @@ public class MeshDestroy : MonoBehaviour
                                         Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 2) % 3)]], lerp2));
                     continue;
                 }
-
+                
 
             }
         }
@@ -298,6 +293,14 @@ public class MeshDestroy : MonoBehaviour
         }
     }
     
+    private float CastRayToPlane(ref Ray ray, Plane targetPlane, Vector3 rayOrigin, Vector3 rayTarget)
+    {
+        ray.origin = rayOrigin;
+        ray.direction = rayTarget - rayOrigin;
+        targetPlane.Raycast(ray, out float enter);
+        return enter;
+    }
+
     public static float SignedVolumeOfTriangle(Vector3 p1, Vector3 p2, Vector3 p3)
     {
         float v321 = p3.x * p2.y * p1.z;

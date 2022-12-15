@@ -20,7 +20,16 @@ public class MeshClass
 
     }
 
-    public void AddTriangle(int submesh, Vector3 vert1, Vector3 vert2, Vector3 vert3, Vector3 normal1, Vector3 normal2, Vector3 normal3, Vector2 uv1, Vector2 uv2, Vector2 uv3)
+    public void AddTriangle(int submesh,
+                            Vector3 vert1,
+                            Vector3 vert2,
+                            Vector3 vert3,
+                            Vector3 normal1,
+                            Vector3 normal2,
+                            Vector3 normal3,
+                            Vector2 uv1,
+                            Vector2 uv2,
+                            Vector2 uv3)
     {
         if (_Triangles.Count - 1 < submesh)
             _Triangles.Add(new List<int>());

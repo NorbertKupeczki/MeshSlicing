@@ -23,7 +23,7 @@ public class SceneManager : MonoBehaviour
             }
             else
             {
-                foreach (var destroyable in destroyables)
+                foreach (MeshDestroy destroyable in destroyables)
                 {
                     destroyable.StartDestruction();
                 }
