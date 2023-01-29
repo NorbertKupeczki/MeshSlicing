@@ -78,6 +78,11 @@ public class PolygonScript : MonoBehaviour
             {
                 if (!pointIndices.Contains(i))
                 {
+                    if (i > pointIndices[pointIndices.Count - 1])
+                    {
+                        break;
+                    }
+                    --safety;
                     continue;
                 }
 
@@ -85,7 +90,8 @@ public class PolygonScript : MonoBehaviour
                 int p_lh = i == pointIndices[pointIndices.Count - 1] ? pointIndices[0] : pointIndices[pointerIndex + 1];
                 int p_rh = i == pointIndices[0] ? pointIndices[pointIndices.Count - 1] : pointIndices[pointerIndex - 1];
 
-                if (IsConvex(points[i].transform.position, points[p_lh].transform.position, points[p_rh].transform.position))
+                if (IsConvex(points[i].transform.position, points[p_lh].transform.position, points[p_rh].transform.position) &&
+                    !CheckConcavePoints(points[i].transform.position, points[p_lh].transform.position, points[p_rh].transform.position, concavePoints))
                 {
                     DrawLine(points[p_lh].transform.position, points[p_rh].transform.position);
                     pointer = pointIndices.IndexOf(i) >= pointIndices.Count - 2 ? pointIndices[0]: pointIndices.IndexOf(i) + 1;
@@ -109,8 +115,35 @@ public class PolygonScript : MonoBehaviour
         return Vector3.Dot(cp1, cp2) >= 0;
     }
 
+    /// <summary>
+    /// Returns True if the point is within the triengle defined by three points (triA, triB, triC) of the triangle.
+    /// </summary>
+    /// <param name="point"></param>
+    /// <param name="triA"></param>
+    /// <param name="triB"></param>
+    /// <param name="triC"></param>
+    /// <returns>True if the point is within the triengle</returns>
     private bool PointInTriangle(Vector3 point, Vector3 triA, Vector3 triB, Vector3 triC)
     {
         return SameSide(triA, triB, triC, point) && SameSide(triB, triC, triA, point) && SameSide(triC, triA, triB, point);
+    }
+
+    private bool CheckConcavePoints(Vector3 a, Vector3 b, Vector3 c, List<Vector3> concavePoints)
+    {
+        foreach (Vector3 point in concavePoints)
+        {
+            if(a == point ||
+               b == point ||
+               c == point)
+            {
+                continue;
+            }
+
+            if(PointInTriangle(point, a, b, c))
+            {
+                return true;
+            }            
+        }
+        return false;
     }
 }
