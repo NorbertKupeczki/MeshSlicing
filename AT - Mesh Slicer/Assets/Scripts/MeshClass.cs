@@ -20,6 +20,36 @@ public class MeshClass
 
     }
 
+    public struct Edge
+    {
+        public Edge(Transform _pointA, Transform _pointB)
+        {
+            PointA = _pointA;
+            PointB = _pointB;
+        }
+
+        public Transform PointA;
+        public Transform PointB;
+
+        public bool CheckPoints(Transform check)
+        {
+            if (check == PointA || check == PointB)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public Transform GetOtherPoint(Transform point)
+        {
+            if (point == PointA)
+            {
+                return PointB;
+            }
+            return PointA;
+        }
+    }
+
     public void AddTriangle(int submesh,
                             Vector3 vert1,
                             Vector3 vert2,
@@ -119,5 +149,24 @@ public class MeshClass
         float originalMass = originalObject.gameObject.GetComponent<Rigidbody>().mass;
         float originalVolume = originalObject.GetObjectVolume();
         return newVolume * originalMass / originalVolume;
+    }
+
+    public void CreateNewCutMesh()
+    {
+        NewGameObject = new GameObject();
+
+        Mesh newMesh = new Mesh();
+
+        newMesh.vertices = Vertices;
+        newMesh.normals = Normals;
+        newMesh.uv = UV;
+        for (var i = 0; i < Triangles.Length; i++)
+            newMesh.SetTriangles(Triangles[i], i, true);
+        Bounds = newMesh.bounds;
+
+        MeshRenderer renderer = NewGameObject.AddComponent<MeshRenderer>();
+
+        MeshFilter filter = NewGameObject.AddComponent<MeshFilter>();
+        filter.mesh = newMesh;
     }
 }

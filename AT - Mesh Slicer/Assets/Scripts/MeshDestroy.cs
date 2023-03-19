@@ -192,9 +192,9 @@ public class MeshDestroy : MonoBehaviour
                 if (sideCount == 3)
                 {
                     newMesh.AddTriangle(i,
-                                         originalMesh.Vertices[triangles[j]], originalMesh.Vertices[triangles[j + 1]], originalMesh.Vertices[triangles[j + 2]],
-                                         originalMesh.Normals[triangles[j]], originalMesh.Normals[triangles[j + 1]], originalMesh.Normals[triangles[j + 2]],
-                                         originalMesh.UV[triangles[j]], originalMesh.UV[triangles[j + 1]], originalMesh.UV[triangles[j + 2]]);
+                                        originalMesh.Vertices[triangles[j]], originalMesh.Vertices[triangles[j + 1]], originalMesh.Vertices[triangles[j + 2]],
+                                        originalMesh.Normals[triangles[j]], originalMesh.Normals[triangles[j + 1]], originalMesh.Normals[triangles[j + 2]],
+                                        originalMesh.UV[triangles[j]], originalMesh.UV[triangles[j + 1]], originalMesh.UV[triangles[j + 2]]);
                     continue;
                 }
 
@@ -219,9 +219,7 @@ public class MeshDestroy : MonoBehaviour
                 if (sideCount == 1)
                 {
                     newMesh.AddTriangle(i,
-                                        originalMesh.Vertices[triangles[j + singleIndex]],
-                                        //Vector3.Lerp(originalMesh.vertices[triangles[j + singleIndex]], originalMesh.vertices[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
-                                        //Vector3.Lerp(originalMesh.vertices[triangles[j + singleIndex]], originalMesh.vertices[triangles[j + ((singleIndex + 2) % 3)]], lerp2),
+                                        originalMesh.Vertices[triangles[j + singleIndex]],                                        
                                         ray1.origin + ray1.direction.normalized * enter1,
                                         ray2.origin + ray2.direction.normalized * enter2,
                                         originalMesh.Normals[triangles[j + singleIndex]],
