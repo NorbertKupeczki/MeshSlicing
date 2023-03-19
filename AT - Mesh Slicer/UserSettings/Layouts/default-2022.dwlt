@@ -39,9 +39,9 @@ MonoBehaviour:
   m_Children: []
   m_Position:
     serializedVersion: 2
-    x: 1359
+    x: 1215
     y: 0
-    width: 172
+    width: 316
     height: 746
   m_MinSize: {x: 102, y: 121}
   m_MaxSize: {x: 4002, y: 4021}
@@ -240,7 +240,7 @@ MonoBehaviour:
     serializedVersion: 2
     x: 471
     y: 0
-    width: 888
+    width: 744
     height: 746
   m_MinSize: {x: 202, y: 221}
   m_MaxSize: {x: 4002, y: 4021}
@@ -323,9 +323,9 @@ MonoBehaviour:
     m_Tooltip: 
   m_Pos:
     serializedVersion: 2
-    x: 1359
+    x: 1215
     y: 73
-    width: 170
+    width: 314
     height: 725
   m_ViewDataDictionary: {fileID: 0}
   m_OverlayCanvas:
@@ -337,7 +337,7 @@ MonoBehaviour:
   m_ShowGizmos: 0
   m_TargetDisplay: 0
   m_ClearColor: {r: 0, g: 0, b: 0, a: 0}
-  m_TargetSize: {x: 170, y: 704}
+  m_TargetSize: {x: 1920, y: 1080}
   m_TextureFilterMode: 0
   m_TextureHideFlags: 61
   m_RenderIMGUI: 1
@@ -351,16 +351,16 @@ MonoBehaviour:
   m_PlayFocused: 0
   m_Gizmos: 0
   m_Stats: 0
-  m_SelectedSizes: 00000000000000000000000000000000000000000000000000000000000000000000000000000000
+  m_SelectedSizes: 03000000000000000000000000000000000000000000000000000000000000000000000000000000
   m_ZoomArea:
     m_HRangeLocked: 0
     m_VRangeLocked: 0
     hZoomLockedByDefault: 0
     vZoomLockedByDefault: 0
-    m_HBaseRangeMin: -85
-    m_HBaseRangeMax: 85
-    m_VBaseRangeMin: -352
-    m_VBaseRangeMax: 352
+    m_HBaseRangeMin: -960
+    m_HBaseRangeMax: 960
+    m_VBaseRangeMin: -540
+    m_VBaseRangeMax: 540
     m_HAllowExceedBaseRangeMin: 1
     m_HAllowExceedBaseRangeMax: 1
     m_VAllowExceedBaseRangeMin: 1
@@ -378,23 +378,23 @@ MonoBehaviour:
       serializedVersion: 2
       x: 0
       y: 21
-      width: 170
+      width: 314
       height: 704
-    m_Scale: {x: 1, y: 1}
-    m_Translation: {x: 85, y: 352}
+    m_Scale: {x: 0.16354166, y: 0.16354166}
+    m_Translation: {x: 157, y: 352}
     m_MarginLeft: 0
     m_MarginRight: 0
     m_MarginTop: 0
     m_MarginBottom: 0
     m_LastShownAreaInsideMargins:
       serializedVersion: 2
-      x: -85
-      y: -352
-      width: 170
-      height: 704
+      x: -960.00006
+      y: -2152.3567
+      width: 1920.0001
+      height: 4304.7134
     m_MinimalGUI: 1
-  m_defaultScale: 1
-  m_LastWindowPixelSize: {x: 170, y: 725}
+  m_defaultScale: 0.16354166
+  m_LastWindowPixelSize: {x: 314, y: 725}
   m_ClearInEditMode: 1
   m_NoCameraWarning: 1
   m_LowResolutionForAspectRatios: 01000000000000000000
@@ -435,7 +435,7 @@ MonoBehaviour:
       scrollPos: {x: 0, y: 0}
       m_SelectedIDs: 
       m_LastClickedID: 0
-      m_ExpandedIDs: 30fbffff
+      m_ExpandedIDs: f03deeff30fbffff
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -481,7 +481,7 @@ MonoBehaviour:
     serializedVersion: 2
     x: 471
     y: 73
-    width: 886
+    width: 742
     height: 725
   m_ViewDataDictionary: {fileID: 0}
   m_OverlayCanvas:
@@ -717,9 +717,9 @@ MonoBehaviour:
   m_PlayAudio: 0
   m_AudioPlay: 0
   m_Position:
-    m_Target: {x: -4.589856, y: -7.2865915, z: 0.29627514}
+    m_Target: {x: -6.035509, y: -4.0730486, z: -1.1323817}
     speed: 2
-    m_Value: {x: -4.589856, y: -7.2865915, z: 0.29627514}
+    m_Value: {x: -6.035509, y: -4.0730486, z: -1.1323817}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -752,7 +752,7 @@ MonoBehaviour:
         m_Value: 1
       m_Color: {r: 0.5, g: 0.5, b: 0.5, a: 0.4}
       m_Pivot: {x: 0, y: 0, z: 0}
-      m_Size: {x: 0.5, y: 0.5}
+      m_Size: {x: 1, y: 1}
     zGrid:
       m_Fade:
         m_Target: 0
@@ -765,13 +765,13 @@ MonoBehaviour:
     m_GridAxis: 1
     m_gridOpacity: 0.5
   m_Rotation:
-    m_Target: {x: -0.3189643, y: 0.6653289, z: -0.3790412, w: -0.5581446}
+    m_Target: {x: -0.20901999, y: 0.7418231, z: -0.26686117, w: -0.5782787}
     speed: 2
-    m_Value: {x: -0.31902835, y: 0.6654625, z: -0.3791173, w: -0.5582567}
+    m_Value: {x: -0.20906055, y: 0.741967, z: -0.26691297, w: -0.57839096}
   m_Size:
-    m_Target: 6.1210885
+    m_Target: 6.108693
     speed: 2
-    m_Value: 6.1210885
+    m_Value: 6.108693
   m_Ortho:
     m_Target: 0
     speed: 2

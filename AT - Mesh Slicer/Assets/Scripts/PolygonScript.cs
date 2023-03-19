@@ -143,8 +143,7 @@ public class PolygonScript : MonoBehaviour
                 if (IsConvex(trianglePoints[0], trianglePoints[1], trianglePoints[2], normal) &&
                     !CheckConcavePoints(trianglePoints[0], trianglePoints[1], trianglePoints[2], concavePoints))
                 {
-                    newMesh.AddTriangle(0, trianglePoints[0], trianglePoints[1], trianglePoints[2], normal, normal, normal, trianglePoints[0], trianglePoints[1], trianglePoints[2]);
-                    subMeshID++;
+                    newMesh.AddTriangle(subMeshID, trianglePoints[0], trianglePoints[1], trianglePoints[2], normal, normal, normal, trianglePoints[0], trianglePoints[1], trianglePoints[2]);
 
                     DrawLine(trianglePoints[1], trianglePoints[2]);
                     pointer = pointIndices.IndexOf(i) >= pointIndices.Count - 2 ? pointIndices[0]: pointIndices.IndexOf(i) + 1;
