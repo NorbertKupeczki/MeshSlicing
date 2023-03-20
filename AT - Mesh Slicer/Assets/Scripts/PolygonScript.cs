@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,11 +14,11 @@ public class PolygonScript : MonoBehaviour
         {
             if (i < points.Count - 1)
             {
-                edges.Add(new MeshClass.Edge(points[i], points[i+1]));
+                edges.Add(new MeshClass.Edge(points[i].position, points[i+1].position));
             }
             else
             {
-                edges.Add(new MeshClass.Edge(points[i], points[0]));
+                edges.Add(new MeshClass.Edge(points[i].position, points[0].position));
             }
         }
 
@@ -45,11 +44,11 @@ public class PolygonScript : MonoBehaviour
         }
     }
 
-    private List<Transform> BuildLoop(List<MeshClass.Edge> edgeList)
+    private List<Vector3> BuildLoop(List<MeshClass.Edge> edgeList)
     {
         bool loopComplete = false;
         int safety = 10;
-        List<Transform> resultLoop = new List<Transform>();
+        List<Vector3> resultLoop = new();
 
         resultLoop.Add(edgeList[0].PointA);
         resultLoop.Add(edgeList[0].PointB);
@@ -58,11 +57,11 @@ public class PolygonScript : MonoBehaviour
         {
             for (int i = 1; i < edgeList.Count; ++i)
             {
-                Transform lastLoopPoint = resultLoop[^1];
+                Vector3 lastLoopPoint = resultLoop[^1];
 
                 if (edgeList[i].CheckPoints(lastLoopPoint))
                 {
-                    Transform otherPoint = edgeList[i].GetOtherPoint(lastLoopPoint);
+                    Vector3 otherPoint = edgeList[i].GetOtherPoint(lastLoopPoint);
                     if (otherPoint == resultLoop[0])
                     {
                         loopComplete = true;
@@ -100,7 +99,7 @@ public class PolygonScript : MonoBehaviour
     
     public void TriangulatePolygon(Vector3 planeNormal, List<MeshClass.Edge> edgeList)
     {
-        List<Transform> loop = BuildLoop(edgeList);
+        List<Vector3> loop = BuildLoop(edgeList);
 
         MeshClass newMesh = new() { };
         int subMeshID = 0;
@@ -118,9 +117,9 @@ public class PolygonScript : MonoBehaviour
             int p_lh = i == loop.Count - 1 ? 0 : i + 1;
             int p_rh = i == 0 ? loop.Count - 1 : i - 1;
 
-            if (!IsConvex(loop[i].position, loop[p_lh].position, loop[p_rh].position, normal))
+            if (!IsConvex(loop[i], loop[p_lh], loop[p_rh], normal))
             {
-                concavePoints.Add(loop[i].position);
+                concavePoints.Add(loop[i]);
             }
         }
 
@@ -169,15 +168,15 @@ public class PolygonScript : MonoBehaviour
     /// <param name="_pointIndices"></param>
     /// <param name="_points"></param>
     /// <returns>Vector3</returns>
-    private Vector3[] GetTrianglePoints(int pointAIndex, List<int> _pointIndices, List<Transform> _points)
+    private Vector3[] GetTrianglePoints(int pointAIndex, List<int> _pointIndices, List<Vector3> _points)
     {
         int pointerIndex = _pointIndices.IndexOf(pointAIndex);
         int p_lh = pointAIndex == _pointIndices[^1] ? _pointIndices[0] : _pointIndices[pointerIndex + 1];
         int p_rh = pointAIndex == _pointIndices[0] ? _pointIndices[^1] : _pointIndices[pointerIndex - 1];
 
-        return new Vector3[] { _points[pointAIndex].position,
-                               _points[p_lh].position,
-                               _points[p_rh].position };
+        return new Vector3[] { _points[pointAIndex],
+                               _points[p_lh],
+                               _points[p_rh]};
     }
 
     private bool SameSide(Vector3 tri1, Vector3 tri2, Vector3 tri3, Vector3 point)

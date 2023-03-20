@@ -882,8 +882,9 @@ MonoBehaviour:
   randomizeCuts: 1
   cuttingObjects: []
   fixedCuttingOffset: {x: 0, y: 0, z: 0}
-  addParticles: 1
+  addParticles: 0
   smokeParticles: {fileID: 1796083770126331350, guid: 7fc19ce4be5590549bc17b0f75916e38, type: 3}
+  christmasSpecial: 0
 --- !u!54 &1154218184
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1018,6 +1019,7 @@ MonoBehaviour:
   fixedCuttingOffset: {x: 0, y: 0, z: 0}
   addParticles: 0
   smokeParticles: {fileID: 1796083770126331350, guid: 7fc19ce4be5590549bc17b0f75916e38, type: 3}
+  christmasSpecial: 0
 --- !u!54 &1233833680
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1249,8 +1251,9 @@ MonoBehaviour:
   randomizeCuts: 1
   cuttingObjects: []
   fixedCuttingOffset: {x: 0, y: 0, z: 0}
-  addParticles: 1
+  addParticles: 0
   smokeParticles: {fileID: 1796083770126331350, guid: 7fc19ce4be5590549bc17b0f75916e38, type: 3}
+  christmasSpecial: 0
 --- !u!54 &1927664928
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1443,13 +1446,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3fadd0ccdf1ed84d94d2f3e09f802e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfCuts: 2
+  numberOfCuts: 1
   centreOfExplosion: {fileID: 717080904}
   randomizeCuts: 1
   cuttingObjects: []
   fixedCuttingOffset: {x: 0, y: 0, z: 2.65}
   addParticles: 0
   smokeParticles: {fileID: 1796083770126331350, guid: 7fc19ce4be5590549bc17b0f75916e38, type: 3}
+  christmasSpecial: 0
 --- !u!64 &2971129281417581436
 MeshCollider:
   m_ObjectHideFlags: 0

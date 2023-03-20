@@ -152,7 +152,7 @@ public class MeshDestroy : MonoBehaviour
                 meshSubParts.Clear();
             }
         }
-        
+
         foreach (MeshClass part in meshParts)
         {
             ApplyExplosionOnPart(part);
@@ -162,7 +162,7 @@ public class MeshDestroy : MonoBehaviour
                 md.CascadingDestruction();
             }
         }
-        
+
         Destroy(gameObject);
     }
 
@@ -216,6 +216,9 @@ public class MeshDestroy : MonoBehaviour
                         Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 1) % 3)]], lerp1),
                         Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 2) % 3)]], lerp2));
                 */
+
+                newMesh.AddEdge(ray1.origin + ray1.direction.normalized * enter1, ray2.origin + ray2.direction.normalized * enter2);
+
                 if (sideCount == 1)
                 {
                     newMesh.AddTriangle(i,
@@ -260,6 +263,8 @@ public class MeshDestroy : MonoBehaviour
 
             }
         }
+
+        newMesh.TriangulatePolygon(plane, above);
 
         newMesh.FillArrays();
 
