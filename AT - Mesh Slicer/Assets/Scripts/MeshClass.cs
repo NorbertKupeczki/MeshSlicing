@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEditorInternal;
 using UnityEngine;
@@ -56,11 +55,13 @@ public class MeshClass
     
     public class EdgePoint
     {
-        public EdgePoint(Vector3 position, Vector3 normal)
+        public EdgePoint(Vector3 position, Vector3 normal, int iD)
         {
             Position = position;
             Normal = normal;
+            ID = iD;
         }
+        public int ID { get; private set; }
         public Vector3 Position { get; private set; }
         public Vector3 Normal { get; private set; }
         public EdgePoint LeftNeighbour { get; private set; }
@@ -84,7 +85,10 @@ public class MeshClass
 
         public void UpdateConvex()
         {
-            IsConvex = MeshClass.IsConvex(Position, LeftNeighbour.Position, RightNeighbour.Position, Normal);
+            if(LeftNeighbour != null && RightNeighbour != null)
+            {
+                IsConvex = MeshClass.IsConvex(Position, LeftNeighbour.Position, RightNeighbour.Position, Normal);
+            }
         }
     }
 
@@ -322,8 +326,8 @@ public class MeshClass
     {
         Vector3 v1 = lhs_vector - point;
         Vector3 v2 = rhs_vector - point;
-        bool isConvex = 0 < GetSignedAngle(v1, v2, planeNormal);
-        return isConvex;
+        float signedAngle = GetSignedAngle(v1, v2, planeNormal);          
+        return (0 < signedAngle || Mathf.Abs(signedAngle) == 180.0f);
     }
 
     private static float GetSignedAngle(Vector3 leftVector, Vector3 rightVector, Vector3 normalVector)
@@ -350,6 +354,30 @@ public class MeshClass
         }
         List<Vector3> loop = BuildLoop(normal);
 
+        List<EdgePoint> points = new();
+        for (int i = 0; i < loop.Count; ++i)
+        {            
+            points.Add(new EdgePoint(loop[i], normal, i));
+
+            if (i == loop.Count - 1)
+            {
+                points[i].SetRightNeighbour(points[i - 1]);
+                points[i - 1].SetLeftNeighbour(points[i]);
+                points[i].SetLeftNeighbour(points[0]);
+                points[0].SetRightNeighbour(points[i]);
+            }
+            else if (i != 0)
+            {
+                points[i].SetRightNeighbour(points[i - 1]);
+                points[i - 1].SetLeftNeighbour(points[i]);
+            }
+        }
+        foreach (EdgePoint point in points)
+        {
+            point.UpdateConvex();
+        }
+
+        points[0].UpdateConvex();
         int subMeshID = 0;
 
         List<int> pointIndices = new();
