@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEditorInternal;
 using UnityEngine;
@@ -50,6 +51,40 @@ public class MeshClass
                 return PointB;
             }
             return PointA;
+        }
+    }
+    
+    public class EdgePoint
+    {
+        public EdgePoint(Vector3 position, Vector3 normal)
+        {
+            Position = position;
+            Normal = normal;
+        }
+        public Vector3 Position { get; private set; }
+        public Vector3 Normal { get; private set; }
+        public EdgePoint LeftNeighbour { get; private set; }
+        public EdgePoint RightNeighbour { get; private set; }
+        public bool IsConvex { get; private set; }
+
+        public void SetLeftNeighbour(EdgePoint neighbour)
+        {
+            LeftNeighbour = neighbour;
+        }
+
+        public void SetRightNeighbour(EdgePoint neighbour)
+        {
+            RightNeighbour = neighbour;
+        }
+
+        public void SetConvex(bool value)
+        {
+            IsConvex = value;
+        }
+
+        public void UpdateConvex()
+        {
+            IsConvex = MeshClass.IsConvex(Position, LeftNeighbour.Position, RightNeighbour.Position, Normal);
         }
     }
 
@@ -154,7 +189,7 @@ public class MeshClass
 
     }
 
-    public void CreateNewCutMesh()
+    public void CreateNewPlaneMesh()
     {
         NewGameObject = new GameObject();
 
@@ -175,17 +210,17 @@ public class MeshClass
         filter.mesh = newMesh;
     }
 
-        public float CalculateProportionalMass(MeshDestroy originalObject, float newVolume)
+    public float CalculateProportionalMass(MeshDestroy originalObject, float newVolume)
     {
         float originalMass = originalObject.gameObject.GetComponent<Rigidbody>().mass;
         float originalVolume = originalObject.GetObjectVolume();
         return newVolume * originalMass / originalVolume;
     }
 
-    private List<Vector3> BuildLoop()
+    private List<Vector3> BuildLoop(Vector3 normal)
     {
         bool loopComplete = false;
-        int safety = 100;
+        int safety = _Edges.Count;
         List<Vector3> resultLoop = new()
         {
             _Edges[0].PointA,
@@ -225,19 +260,75 @@ public class MeshClass
             if (safety < 1)
             {
                 loopComplete = true;
+                Debug.LogWarning("Safety limit at generating the cut edge loop is reached!");
             }
 
             --safety;
         }
+
+        AlignLoopWithNormal(resultLoop, normal);
         return resultLoop;
     }
 
-    private bool IsConvex(Vector3 point, Vector3 lhs_vector, Vector3 rhs_vector, Vector3 planeNormal)
+    private void AlignLoopWithNormal(List<Vector3> loop, Vector3 normal)
+    {
+        float polygonInternalAngle = (loop.Count - 2) * 180.0f;
+        float internalAngle = 0.0f;
+
+        for (int i = 0; i < loop.Count; ++i)
+        {
+            Vector3 leftVector;
+            Vector3 rightVector;
+            if (i == 0)
+            {
+                leftVector = loop[1] - loop[i];
+                rightVector = loop[^1] - loop[i];
+                
+            }
+            else if (i == loop.Count - 1)
+            {
+                leftVector = loop[0] - loop[i];
+                rightVector = loop[^2] - loop[i];
+            }
+            else
+            {
+                leftVector = loop[i+1] - loop[i];
+                rightVector = loop[i-1] - loop[i];
+            }
+            float angle = GetSignedAngle(leftVector.normalized, rightVector.normalized, normal.normalized);
+            
+            if(angle == 180.0f || angle == -180.0f)
+            {
+                polygonInternalAngle -= 180.0f;
+            }
+            else if (angle < 0)
+            {
+                internalAngle += (360.0f + angle);
+            }
+            else
+            {
+                internalAngle += angle;
+            }
+        }
+        bool insideOut = (int)internalAngle > (int)polygonInternalAngle;
+        if (insideOut)
+        {
+            Debug.Log(internalAngle + " : " + polygonInternalAngle);
+            loop.Reverse();
+        }
+    }
+
+    public static bool IsConvex(Vector3 point, Vector3 lhs_vector, Vector3 rhs_vector, Vector3 planeNormal)
     {
         Vector3 v1 = lhs_vector - point;
         Vector3 v2 = rhs_vector - point;
-        bool isConvex = 0 < Vector3.SignedAngle(v1, v2, planeNormal);
+        bool isConvex = 0 < GetSignedAngle(v1, v2, planeNormal);
         return isConvex;
+    }
+
+    private static float GetSignedAngle(Vector3 leftVector, Vector3 rightVector, Vector3 normalVector)
+    {
+        return Vector3.SignedAngle(leftVector, rightVector, normalVector);
     }
 
     private void DrawLine(Vector3 from, Vector3 to)
@@ -247,21 +338,24 @@ public class MeshClass
 
     public void TriangulatePolygon(Plane plane, bool above)
     {
-        List<Vector3> loop = BuildLoop();
-        Vector3 normal = plane.normal;
-
-        if (above)
+        Vector3 normal = -plane.normal;
+        if (!above)
         {
-            loop.Reverse();
             normal *= -1;
+            //Debug.DrawLine(Vector3.zero, normal, Color.yellow, 15.0f);
         }
+        else
+        {
+            //Debug.DrawLine(Vector3.zero, normal, Color.blue, 15.0f);
+        }
+        List<Vector3> loop = BuildLoop(normal);
 
         int subMeshID = 0;
 
         List<int> pointIndices = new();
         List<Vector3> concavePoints = new();
         int pointer = 0;
-        int safety = 1000;
+        int safety = 300000;
 
         for (int i = 0; i < loop.Count; i++)
         {
@@ -286,7 +380,6 @@ public class MeshClass
                     {
                         break;
                     }
-                    --safety;
                     continue;
                 }
 
@@ -299,15 +392,17 @@ public class MeshClass
                                 trianglePoints[0], trianglePoints[1], trianglePoints[2],
                                 normal, normal, normal,
                                 trianglePoints[0], trianglePoints[1], trianglePoints[2]);
-                    //++subMeshID;
-                    DrawLine(trianglePoints[1], trianglePoints[2]);
+                    //DrawLine(trianglePoints[1], trianglePoints[2]);
                     pointer = pointIndices.IndexOf(i) >= pointIndices.Count - 2 ? pointIndices[0] : pointIndices.IndexOf(i) + 1;
                     pointIndices.Remove(i);
                     break;
                 }
             }
-
             --safety;
+            if (safety < 1)
+            {
+                Debug.LogWarning("Safety limit at cut surface triangulation is reached!");
+            }
         }
 
         Vector3[] lastPoints = GetTrianglePoints(pointIndices[0], pointIndices, loop);

@@ -158,7 +158,7 @@ public class PolygonScript : MonoBehaviour
         newMesh.AddTriangle(0, lastPoints[0], lastPoints[1], lastPoints[2], normal, normal, normal, lastPoints[0], lastPoints[1], lastPoints[2]);
 
         newMesh.FillArrays();
-        newMesh.CreateNewCutMesh();
+        newMesh.CreateNewPlaneMesh();
     }
 
     /// <summary>

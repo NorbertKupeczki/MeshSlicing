@@ -217,7 +217,14 @@ public class MeshDestroy : MonoBehaviour
                         Vector2.Lerp(originalMesh.UV[triangles[j + singleIndex]], originalMesh.UV[triangles[j + ((singleIndex + 2) % 3)]], lerp2));
                 */
 
-                newMesh.AddEdge(ray1.origin + ray1.direction.normalized * enter1, ray2.origin + ray2.direction.normalized * enter2);
+                if (!above)
+                {
+                    newMesh.AddEdge(ray1.origin + ray1.direction.normalized * enter1, ray2.origin + ray2.direction.normalized * enter2);
+                }
+                else
+                {
+                    newMesh.AddEdge(ray2.origin + ray2.direction.normalized * enter2, ray1.origin + ray1.direction.normalized * enter1);
+                }
 
                 if (sideCount == 1)
                 {
@@ -271,31 +278,6 @@ public class MeshDestroy : MonoBehaviour
         return newMesh;
     }
 
-    private void AddEdge(int subMesh, MeshClass partMesh, Vector3 normal, Vector3 vertex1, Vector3 vertex2, Vector2 uv1, Vector2 uv2)
-    {
-        if (!edgeSet)
-        {
-            edgeSet = true;
-            edgeVertex = vertex1;
-            edgeUV = uv1;
-        }
-        else
-        {
-            edgePlane.Set3Points(edgeVertex, vertex1, vertex2);
-
-            partMesh.AddTriangle(subMesh,
-                                edgeVertex,
-                                edgePlane.GetSide(edgeVertex + normal) ? vertex1 : vertex2,
-                                edgePlane.GetSide(edgeVertex + normal) ? vertex2 : vertex1,
-                                normal,
-                                normal,
-                                normal,
-                                edgeUV,
-                                uv1,
-                                uv2);
-        }
-    }
-    
     private float CastRayToPlane(ref Ray ray, Plane targetPlane, Vector3 rayOrigin, Vector3 rayTarget)
     {
         ray.origin = rayOrigin;
