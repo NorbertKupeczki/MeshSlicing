@@ -60,6 +60,8 @@ public class MeshClass
             Position = position;
             Normal = normal;
             ID = iD;
+            IsConvex = false;
+            OnEdgePoint = false;
         }
         public int ID { get; private set; }
         public Vector3 Position { get; private set; }
@@ -67,6 +69,7 @@ public class MeshClass
         public EdgePoint LeftNeighbour { get; private set; }
         public EdgePoint RightNeighbour { get; private set; }
         public bool IsConvex { get; private set; }
+        public bool OnEdgePoint { get; private set; }
 
         public void SetLeftNeighbour(EdgePoint neighbour)
         {
@@ -88,6 +91,15 @@ public class MeshClass
             if(LeftNeighbour != null && RightNeighbour != null)
             {
                 IsConvex = MeshClass.IsConvex(Position, LeftNeighbour.Position, RightNeighbour.Position, Normal);
+            }
+
+            if(Mathf.Abs(MeshClass.GetSignedAngle(LeftNeighbour.Position - Position, RightNeighbour.Position - Position, Normal)) == 180.0f)
+            {
+                OnEdgePoint = true;
+            }
+            else
+            {
+                OnEdgePoint = false;
             }
         }
     }
@@ -330,7 +342,7 @@ public class MeshClass
         return (0 < signedAngle || Mathf.Abs(signedAngle) == 180.0f);
     }
 
-    private static float GetSignedAngle(Vector3 leftVector, Vector3 rightVector, Vector3 normalVector)
+    public static float GetSignedAngle(Vector3 leftVector, Vector3 rightVector, Vector3 normalVector)
     {
         return Vector3.SignedAngle(leftVector, rightVector, normalVector);
     }
@@ -346,13 +358,10 @@ public class MeshClass
         if (!above)
         {
             normal *= -1;
-            //Debug.DrawLine(Vector3.zero, normal, Color.yellow, 15.0f);
         }
-        else
-        {
-            //Debug.DrawLine(Vector3.zero, normal, Color.blue, 15.0f);
-        }
+
         List<Vector3> loop = BuildLoop(normal);
+        int subMeshID = 0;
 
         List<EdgePoint> points = new();
         for (int i = 0; i < loop.Count; ++i)
@@ -372,87 +381,59 @@ public class MeshClass
                 points[i - 1].SetLeftNeighbour(points[i]);
             }
         }
-        foreach (EdgePoint point in points)
+
+        List<EdgePoint> concavePoints = new();
+        for (int i = 0; i < points.Count; ++i)
         {
-            point.UpdateConvex();
+            points[i].UpdateConvex();
+            if (!points[i].IsConvex)
+            {
+                concavePoints.Add(points[i]);
+            }
         }
 
-        points[0].UpdateConvex();
-        int subMeshID = 0;
-
-        List<int> pointIndices = new();
-        List<Vector3> concavePoints = new();
-        int pointer = 0;
+        int activePoints = points.Count;
         int safety = 300000;
 
-        for (int i = 0; i < loop.Count; i++)
+        EdgePoint pointer = points[0];
+
+        while (activePoints > 3 && safety > 0)
         {
-            pointIndices.Add(i);
-
-            int p_lh = i == loop.Count - 1 ? 0 : i + 1;
-            int p_rh = i == 0 ? loop.Count - 1 : i - 1;
-
-            if (!IsConvex(loop[i], loop[p_lh], loop[p_rh], normal))
+            if (pointer.IsConvex &&
+                !pointer.OnEdgePoint &&
+                !CheckConcavePoints(pointer.Position, pointer.LeftNeighbour.Position, pointer.RightNeighbour.Position, concavePoints))
             {
-                concavePoints.Add(loop[i]);
+                AddTriangle(subMeshID,
+                            pointer.Position, pointer.LeftNeighbour.Position, pointer.RightNeighbour.Position,
+                            normal, normal, normal,
+                            pointer.Position, pointer.LeftNeighbour.Position, pointer.RightNeighbour.Position);
+                pointer.RightNeighbour.SetLeftNeighbour(pointer.LeftNeighbour);
+                pointer.LeftNeighbour.SetRightNeighbour(pointer.RightNeighbour);
+                pointer.RightNeighbour.UpdateConvex();
+                pointer.LeftNeighbour.UpdateConvex();
+                EdgePoint tempPoint = pointer;
+                pointer = pointer.LeftNeighbour;
+                tempPoint.SetLeftNeighbour(null);
+                tempPoint.SetRightNeighbour(null);
+                --activePoints;
             }
-        }
-
-        while (pointIndices.Count > 3 && safety > 0)
-        {
-            for (int i = pointIndices[pointer]; pointer < pointIndices[^1]; ++i)
+            else
             {
-                if (!pointIndices.Contains(i))
-                {
-                    if (i > pointIndices[^1])
-                    {
-                        break;
-                    }
-                    continue;
-                }
-
-                Vector3[] trianglePoints = GetTrianglePoints(i, pointIndices, loop);
-
-                if (IsConvex(trianglePoints[0], trianglePoints[1], trianglePoints[2], normal) &&
-                    !CheckConcavePoints(trianglePoints[0], trianglePoints[1], trianglePoints[2], concavePoints))
-                {
-                    AddTriangle(subMeshID,
-                                trianglePoints[0], trianglePoints[1], trianglePoints[2],
-                                normal, normal, normal,
-                                trianglePoints[0], trianglePoints[1], trianglePoints[2]);
-                    //DrawLine(trianglePoints[1], trianglePoints[2]);
-                    pointer = pointIndices.IndexOf(i) >= pointIndices.Count - 2 ? pointIndices[0] : pointIndices.IndexOf(i) + 1;
-                    pointIndices.Remove(i);
-                    break;
-                }
+                pointer.UpdateConvex();
             }
+            pointer = pointer.LeftNeighbour;
+                        
             --safety;
             if (safety < 1)
             {
                 Debug.LogWarning("Safety limit at cut surface triangulation is reached!");
             }
         }
-
-        Vector3[] lastPoints = GetTrianglePoints(pointIndices[0], pointIndices, loop);
-        AddTriangle(subMeshID, lastPoints[0], lastPoints[1], lastPoints[2], normal, normal, normal, lastPoints[0], lastPoints[1], lastPoints[2]);
-    }
-
-    /// <summary>
-    /// Gets an array with the coordinates of the triangle starting from point A, followed by its left hand and right hand points.
-    /// </summary>
-    /// <param name="pointAIndex"></param>
-    /// <param name="_pointIndices"></param>
-    /// <param name="_points"></param>
-    /// <returns>Vector3</returns>
-    private Vector3[] GetTrianglePoints(int pointAIndex, List<int> _pointIndices, List<Vector3> _points)
-    {
-        int pointerIndex = _pointIndices.IndexOf(pointAIndex);
-        int p_lh = pointAIndex == _pointIndices[^1] ? _pointIndices[0] : _pointIndices[pointerIndex + 1];
-        int p_rh = pointAIndex == _pointIndices[0] ? _pointIndices[^1] : _pointIndices[pointerIndex - 1];
-
-        return new Vector3[] { _points[pointAIndex],
-                               _points[p_lh],
-                               _points[p_rh]};
+        Debug.Log("Steps used: " + (300000 - safety));
+        AddTriangle(subMeshID,
+                    pointer.Position, pointer.LeftNeighbour.Position, pointer.RightNeighbour.Position,
+                    normal, normal, normal,
+                    pointer.Position, pointer.LeftNeighbour.Position, pointer.RightNeighbour.Position);
     }
 
     private bool SameSide(Vector3 tri1, Vector3 tri2, Vector3 tri3, Vector3 point)
@@ -475,18 +456,18 @@ public class MeshClass
         return SameSide(triA, triB, triC, point) && SameSide(triB, triC, triA, point) && SameSide(triC, triA, triB, point);
     }
 
-    private bool CheckConcavePoints(Vector3 a, Vector3 b, Vector3 c, List<Vector3> concavePoints)
+    private bool CheckConcavePoints(Vector3 a, Vector3 b, Vector3 c, List<EdgePoint> concavePoints)
     {
-        foreach (Vector3 point in concavePoints)
+        foreach (EdgePoint point in concavePoints)
         {
-            if (a == point ||
-               b == point ||
-               c == point)
+            if (a == point.Position ||
+                b == point.Position ||
+                c == point.Position)
             {
                 continue;
             }
 
-            if (PointInTriangle(point, a, b, c))
+            if (PointInTriangle(point.Position, a, b, c))
             {
                 return true;
             }
