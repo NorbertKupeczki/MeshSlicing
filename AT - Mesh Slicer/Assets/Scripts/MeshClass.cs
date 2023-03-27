@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEditorInternal;
 using UnityEngine;
 
 public class MeshClass
@@ -15,7 +14,7 @@ public class MeshClass
     public Vector2[] UV;
     public GameObject NewGameObject;
     public Bounds Bounds = new();
-
+    private const int TRTIANGULATION_SAFETY = 300000;
     public MeshClass()
     {
 
@@ -187,22 +186,12 @@ public class MeshClass
         meshDestroy.SetOriginalVolume(original.GetOriginalVolume());
         meshDestroy.SetNumberOfCuts(original.GetNumberOfCuts());
         meshDestroy.SetCentreOfExplosion(original.GetCentreOfExplosion());
-        meshDestroy.addParticles = original.addParticles;
-        meshDestroy.smokeParticles = original.smokeParticles;
 
         Rigidbody rigidbody = NewGameObject.AddComponent<Rigidbody>();
         rigidbody.mass = CalculateProportionalMass(original, meshDestroy.GetObjectVolume());
         rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
         rigidbody.drag = original.gameObject.GetComponent<Rigidbody>().drag;
         rigidbody.angularDrag = original.gameObject.GetComponent<Rigidbody>().angularDrag;
-
-        if (original.IsAddingParticles())
-        {
-            ParticleSystem particleSystem = NewGameObject.AddComponent<ParticleSystem>();
-            ComponentUtility.CopyComponent(original.smokeParticles);
-            ComponentUtility.PasteComponentValues(particleSystem);
-        }
-
     }
 
     public void CreateNewPlaneMesh()
@@ -347,11 +336,6 @@ public class MeshClass
         return Vector3.SignedAngle(leftVector, rightVector, normalVector);
     }
 
-    private void DrawLine(Vector3 from, Vector3 to)
-    {
-        Debug.DrawLine(from, to, Color.magenta, 5.0f);
-    }
-
     public void TriangulatePolygon(Plane plane, bool above)
     {
         Vector3 normal = -plane.normal;
@@ -393,7 +377,7 @@ public class MeshClass
         }
 
         int activePoints = points.Count;
-        int safety = 300000;
+        int safety = TRTIANGULATION_SAFETY;
 
         EdgePoint pointer = points[0];
 
@@ -429,7 +413,7 @@ public class MeshClass
                 Debug.LogWarning("Safety limit at cut surface triangulation is reached!");
             }
         }
-        Debug.Log("Steps used: " + (300000 - safety));
+        Debug.Log("Steps used: " + (TRTIANGULATION_SAFETY - safety));
         AddTriangle(subMeshID,
                     pointer.Position, pointer.LeftNeighbour.Position, pointer.RightNeighbour.Position,
                     normal, normal, normal,
@@ -473,5 +457,10 @@ public class MeshClass
             }
         }
         return false;
+    }
+
+    public bool HasEdges()
+    {
+        return _Edges.Count > 0;
     }
 }

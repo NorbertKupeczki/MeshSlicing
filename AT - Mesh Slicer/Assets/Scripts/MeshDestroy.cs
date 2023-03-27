@@ -3,29 +3,19 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class MeshDestroy : MonoBehaviour
-{
-    private bool edgeSet = false;
-    private Vector3 edgeVertex = Vector3.zero;
-    private Vector2 edgeUV = Vector2.zero;
-    private Plane edgePlane = new Plane();
+{   
     private ExplosionPoint explosionData;
     private float ObjectVolume; // Mesh volume
     private float OriginalVolume = 0.0f; // Original volume of the mesh
 
-    [Header ("Base settings")]
-    [SerializeField] int numberOfCuts  = 1;
+    [Header ("Settings")]
     [SerializeField] Transform centreOfExplosion;
-
-    [Header("Cutting properties")]
-    [SerializeField] bool randomizeCuts = true;
-    [SerializeField] List<GameObject> cuttingObjects = new List<GameObject>();
-    [SerializeField] List<Plane> cuttingPlanes = new List<Plane> { };
     [SerializeField] Vector3 fixedCuttingOffset = new Vector3(0.0f, 0.0f, 0.0f);
-    
-    [Header("Extras")]
-    [SerializeField] public bool addParticles = false;
-    [SerializeField] public ParticleSystem smokeParticles;
-    [SerializeField] public bool christmasSpecial = false;
+    [Range(0.3f, 1.0f)]
+    [SerializeField] private float volumeProportion = 0.5f;
+    private int numberOfCuts  = 1;
+    private bool randomizeCuts = true;
+    private List<Plane> cuttingPlanes = new List<Plane> { };
     
     private void Awake()
     {
@@ -91,11 +81,6 @@ public class MeshDestroy : MonoBehaviour
         StartCoroutine(ExplodeCoroutine());
     }
 
-    public bool IsAddingParticles()
-    {
-        return addParticles;
-    }
-
     private IEnumerator ExplodeCoroutine()
     {
         yield return null;
@@ -129,7 +114,7 @@ public class MeshDestroy : MonoBehaviour
                 for (int i = 0; i < meshParts.Count; i++)
                 {
                     Bounds bounds = meshParts[i].Bounds;
-                    bounds.Expand(0.25f);
+                    bounds.Expand(0.15f);
 
                     Plane plane = GetRandomPlane(bounds);
                     meshSubParts.AddRange(SeparateMeshToSubParts(meshParts[i], plane));
@@ -157,7 +142,7 @@ public class MeshDestroy : MonoBehaviour
         {
             ApplyExplosionOnPart(part);
             MeshDestroy md = part.NewGameObject.GetComponent<MeshDestroy>();
-            if (md.GetVolumeProportion() > explosionData.volumeProportion)
+            if (md.GetVolumeProportion() > volumeProportion)
             {
                 md.CascadingDestruction();
             }
@@ -175,7 +160,6 @@ public class MeshDestroy : MonoBehaviour
         for (int i = 0; i < originalMesh.Triangles.Length; ++i)
         {
             int[] triangles = originalMesh.Triangles[i];
-            edgeSet = false;
 
             for (int j = 0; j < triangles.Length; j += 3)
             {
@@ -271,7 +255,10 @@ public class MeshDestroy : MonoBehaviour
             }
         }
 
-        newMesh.TriangulatePolygon(plane, above);
+        if(newMesh.HasEdges())
+        {
+            newMesh.TriangulatePolygon(plane, above);
+        }
 
         newMesh.FillArrays();
 

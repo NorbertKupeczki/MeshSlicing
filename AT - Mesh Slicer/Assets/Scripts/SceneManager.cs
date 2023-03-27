@@ -6,29 +6,34 @@ using UnityEngine.InputSystem;
 public class SceneManager : MonoBehaviour
 {
     [SerializeField] List<MeshDestroy> destroyables = new List<MeshDestroy> { };
-    [SerializeField] bool timedDestruction = false;
-    [SerializeField] float detonationDelay = 1.0f;
+    [SerializeField] bool timedExecution = false;
+    [Range (0.5f,5.0f)]
+    [SerializeField] float delay = 1.0f;
     private void Awake()
     {
         
+    }
+
+    public void StartProcess()
+    {
+        if (timedExecution)
+        {
+            StartCoroutine(TimedDestruction(delay));
+        }
+        else
+        {
+            foreach (MeshDestroy destroyable in destroyables)
+            {
+                destroyable.StartDestruction();
+            }
+        }
     }
 
     public void ExplodeMeshes(InputAction.CallbackContext context)
     {
         if (context.performed)
         {
-            if (timedDestruction)
-            {
-                StartCoroutine(TimedDestruction(detonationDelay));
-            }
-            else
-            {
-                foreach (MeshDestroy destroyable in destroyables)
-                {
-                    destroyable.StartDestruction();
-                }
-            }
-            
+            StartProcess();            
         }
     }
 
